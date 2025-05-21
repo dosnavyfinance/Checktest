@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ผลสอบเลื่อนฐานะ</title>
+  <script src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 2em; }
+    img { max-width: 200px; border-radius: 8px; margin-top: 1em; }
+  </style>
+</head>
+<body>
+  <h2>ระบบประกาศผลสอบ</h2>
+  <p id="userIdDisplay">กำลังโหลด...</p>
+  <div id="resultArea"></div>
+
+  <script>
+    const sheetApi = "https://script.google.com/macros/s/AKfycbwC0-ZzkeYj3gUYhde2qyRyZxEgxUxnOXTCuziir6XMk8LcHKtOW8obbL-jO2cAu2Kbxw/exec";
+
+    async function main() {
+      await liff.init({ liffId: "YOUR_LIFF_ID" });
+
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
+      }
+
+      const profile = await liff.getProfile();
+      const userId = profile.userId;
+      document.getElementById("userIdDisplay").innerText = "User ID: " + userId;
+
+      // ดึงข้อมูลจาก Google Sheet
+      const res = await fetch(sheetApi + "?userId=" + userId);
+      const data = await res.json();
+
+      const area = document.getElementById("resultArea");
+
+      if (data.error) {
+        area.innerHTML = `<p style="color:red">${data.error}</p>`;
+      } else {
+        area.innerHTML = `
+          <h3>${data.name}</h3>
+          <p><strong>บัญชี:</strong> ${data.account}</p>
+          <p><strong>คอมพิวเตอร์:</strong> ${data.computer}</p>
+          <p><strong>ค่าใช้จ่าย:</strong> ${data.cost}</p>
+          <p><strong>ภาษาอังกฤษ:</strong> ${data.english}</p>
+          <p><strong>คะแนนเพิ่ม:</strong> ${data.bonus}</p>
+          <p><strong>คะแนนรวม:</strong> ${data.total}</p>
+          <p><strong>ลำดับ:</strong> ${data.rank}</p>
+          <p><strong>วันที่ประกาศผล:</strong> ${data.datetest}</p>
+          <img src="${data.image}" alt="รูปภาพ">
+        `;
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>
