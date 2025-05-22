@@ -2,17 +2,89 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>ผลสอบเลื่อนฐานะ</title>
+  <title>ผลสอบ</title>
   <script src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
   <style>
-    body { font-family: sans-serif; text-align: center; padding: 2em; }
-    img { max-width: 200px; border-radius: 8px; margin-top: 1em; }
+    body {
+      font-family: 'Sarabun', sans-serif;
+      text-align: center;
+      padding: 2em;
+      background: #f7f7f7;
+    }
+
+    #spinner {
+      margin: 2em auto;
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #3498db;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    #userInfo {
+      color: #007bff;
+      font-size: 1.2em;
+      margin-top: 1em;
+    }
+
+    #resultTable {
+      margin: 2em auto;
+      border-collapse: collapse;
+      width: 90%;
+      max-width: 500px;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    #resultTable th, #resultTable td {
+      border: 1px solid #ddd;
+      padding: 12px;
+    }
+
+    #resultTable th {
+      background-color: #007bff;
+      color: white;
+    }
+
+    #totalScore {
+      font-weight: bold;
+    }
+
+    #announceDate {
+      margin-top: 1em;
+      font-size: 1em;
+      color: #333;
+    }
+
+    #rankDisplay {
+      font-size: 2em;
+      font-weight: bold;
+      color: red;
+      margin-top: 1em;
+    }
+
+    img {
+      margin-top: 1em;
+      max-width: 200px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
   </style>
 </head>
 <body>
-  <h2>ระบบประกาศผลสอบ</h2>
-  <p id="userIdDisplay">กำลังโหลด...</p>
-  <div id="resultArea"></div>
+  <h2>ผลสอบจัดอันดับเพื่อเลื่อนฐานะนายทหารประทวน ประจำปี 2568</h2>
+
+  <!-- Spinner Loading -->
+  <div id="spinner"></div>
+
+  <!-- Result area -->
+  <div id="resultArea" style="display:none;"></div>
 
   <script>
     const sheetApi = "https://script.google.com/macros/s/AKfycbwC0-ZzkeYj3gUYhde2qyRyZxEgxUxnOXTCuziir6XMk8LcHKtOW8obbL-jO2cAu2Kbxw/exec";
@@ -27,28 +99,46 @@
 
       const profile = await liff.getProfile();
       const userId = profile.userId;
-      document.getElementById("userIdDisplay").innerText = "User ID: " + userId;
 
-      // ดึงข้อมูลจาก Google Sheet
       const res = await fetch(sheetApi + "?userId=" + userId);
       const data = await res.json();
 
+      document.getElementById("spinner").style.display = "none";
       const area = document.getElementById("resultArea");
+      area.style.display = "block";
 
       if (data.error) {
         area.innerHTML = `<p style="color:red">${data.error}</p>`;
       } else {
+        const totalFixed = parseFloat(data.total).toFixed(2);
+
         area.innerHTML = `
-          <h3>${data.name}</h3>
-          <p><strong>บัญชี:</strong> ${data.account}</p>
-          <p><strong>คอมพิวเตอร์:</strong> ${data.computer}</p>
-          <p><strong>ค่าใช้จ่าย:</strong> ${data.cost}</p>
-          <p><strong>ภาษาอังกฤษ:</strong> ${data.english}</p>
-          <p><strong>คะแนนเพิ่ม:</strong> ${data.bonus}</p>
-          <p><strong>คะแนนรวม:</strong> ${data.total}</p>
-          <p><strong>ลำดับ:</strong> ${data.rank}</p>
-          <p><strong>วันที่ประกาศผล:</strong> ${data.datetest}</p>
-          <img src="${data.image}" alt="รูปภาพ">
+          <img src="${data.image}" alt="รูปภาพผู้ใช้">
+          <div id="userInfo">
+            <p><strong>User ID:</strong> ${userId}</p>
+            <p><strong>ชื่อ - สกุล:</strong> ${data.name}</p>
+          </div>
+
+          <table id="resultTable">
+            <thead>
+              <tr>
+                <th>วิชาสอบ</th>
+                <th>คะแนน</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>บัญชี</td><td>${data.account}</td></tr>
+              <tr><td>คอมพิวเตอร์</td><td>${data.computer}</td></tr>
+              <tr><td>ค่าใช้จ่าย</td><td>${data.cost}</td></tr>
+              <tr><td>ภาษาอังกฤษ</td><td>${data.english}</td></tr>
+              <tr><td>คะแนนเพิ่ม</td><td>${data.bonus}</td></tr>
+              <tr id="totalScore"><td><strong>คะแนนรวม</strong></td><td><strong>${totalFixed}</strong></td></tr>
+            </tbody>
+          </table>
+
+          <p id="announceDate"><strong>วันที่ประกาศผล:</strong> ${data.datetest}</p>
+
+          <div id="rankDisplay">ลำดับ: ${data.rank}</div>
         `;
       }
     }
