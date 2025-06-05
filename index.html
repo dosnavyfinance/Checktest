@@ -87,6 +87,14 @@
   <div id="resultArea" style="display:none;"></div>
 
   <script>
+    function formatThaiDate(dateString) {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear() + 543;
+    return `${day}/${month}/${year}`;
+  }
+    
     const sheetApi = "https://script.google.com/macros/s/AKfycbwC0-ZzkeYj3gUYhde2qyRyZxEgxUxnOXTCuziir6XMk8LcHKtOW8obbL-jO2cAu2Kbxw/exec";
 
     async function main() {
@@ -136,7 +144,7 @@
             </tbody>
           </table>
 
-          <p id="announceDate"><strong>วันที่ประกาศผล:</strong> ${data.datetest}</p>
+          <p id="announceDate"><strong>วันที่ประกาศผล:</strong> ${formatThaiDate(data.datetest)}</p>
 
           <div id="rankDisplay">ลำดับ: ${data.rank}</div>
         `;
