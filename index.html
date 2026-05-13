@@ -12,6 +12,17 @@
       background: #f7f7f7;
     }
 
+    /* ส่วนแสดง userId เพื่อตรวจสอบ */
+    #debugBox {
+      background: #e9ecef;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px dashed #6c757d;
+      font-size: 0.9em;
+      word-break: break-all;
+    }
+
     #spinner {
       margin: 2em auto;
       border: 6px solid #f3f3f3;
@@ -56,29 +67,30 @@
       font-weight: bold;
     }
 
-    #announceDate {
-      margin-top: 1em;
-      font-size: 1em;
-      color: #333;
-    }
-
     #rankDisplay {
-      font-size: 2em;
+      font-size: 2.5em;
       font-weight: bold;
-      color: red;
+      color: #dc3545;
       margin-top: 1em;
     }
 
     img {
       margin-top: 1em;
-      max-width: 200px;
-      border-radius: 8px;
+      max-width: 150px;
+      border-radius: 50%;
       box-shadow: 0 0 5px rgba(0,0,0,0.2);
     }
   </style>
 </head>
 <body>
-  <h2>ผลสอบจัดอันดับเพื่อเลื่อนฐานะนายทหารประทวน ประจำปี 2568</h2>
+
+  <h2>ผลสอบเลื่อนฐานะนายทหารประทวน 2568</h2>
+
+  <!-- ส่วนแสดงค่า userId สำหรับ Debug -->
+  <div id="debugBox">
+    <strong>กำลังตรวจสอบสิทธิ์สำหรับ ID:</strong> <br>
+    <span id="displayUserId">กำลังโหลด...</span>
+  </div>
 
   <!-- Spinner Loading -->
   <div id="spinner"></div>
@@ -87,66 +99,83 @@
   <div id="resultArea" style="display:none;"></div>
 
   <script>
-     function formatThaiDate(dateString) {
-    const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  }
+    function formatThaiDate(dateString) {
+      if(!dateString) return "-";
+      const date = new Date(dateString);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear() + 543; // ปรับเป็น พ.ศ.
+      return `${day}/${month}/${year}`;
+    }
+
     const sheetApi = "https://script.google.com/macros/s/AKfycbwC0-ZzkeYj3gUYhde2qyRyZxEgxUxnOXTCuziir6XMk8LcHKtOW8obbL-jO2cAu2Kbxw/exec";
 
     async function main() {
-      await liff.init({ liffId: "2006679138-PWgbBdk3" });
+      try {
+        await liff.init({ liffId: "2006679138-PWgbBdk3" });
 
-      if (!liff.isLoggedIn()) {
-        liff.login();
-        return;
-      }
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
 
-      const profile = await liff.getProfile();
-      const userId = profile.userId;
+        const profile = await liff.getProfile();
+        const userId = profile.userId;
+        
+        // แสดง userId ขึ้นมาก่อนทันทีที่โหลดสำเร็จ
+        document.getElementById("displayUserId").innerText = userId;
 
-      const res = await fetch(sheetApi + "?userId=" + userId);
-      const data = await res.json();
+        // เรียกข้อมูลจาก Google Sheets
+        const res = await fetch(sheetApi + "?userId=" + userId);
+        const data = await res.json();
 
-      document.getElementById("spinner").style.display = "none";
-      const area = document.getElementById("resultArea");
-      area.style.display = "block";
+        document.getElementById("spinner").style.display = "none";
+        const area = document.getElementById("resultArea");
+        area.style.display = "block";
 
-      if (data.error) {
-        area.innerHTML = `<p style="color:red">${data.error}</p>`;
-      } else {
-        const totalFixed = parseFloat(data.total).toFixed(2);
+        if (data.error) {
+          area.innerHTML = `<div style="color:red; padding:20px; background:#fff; border-radius:8px;">
+                              <h3>ไม่พบข้อมูล</h3>
+                              <p>${data.error}</p>
+                              <small>โปรดตรวจสอบว่าท่านได้ลงทะเบียนด้วย ID นี้แล้วหรือไม่</small>
+                            </div>`;
+        } else {
+          const totalFixed = parseFloat(data.total).toFixed(2);
 
-        area.innerHTML = `
-          <img src="${data.image}" alt="รูปภาพผู้ใช้">
-          <div id="userInfo">
-            <p><strong>User ID:</strong> ${userId}</p>
-            <p><strong>ชื่อ - สกุล:</strong> ${data.name}</p>
-          </div>
+          area.innerHTML = `
+            <img src="${data.image || 'https://via.placeholder.com/150'}" alt="รูปภาพผู้ใช้">
+            <div id="userInfo">
+              <p><strong>ชื่อ - สกุล:</strong> ${data.name}</p>
+            </div>
 
-          <table id="resultTable">
-            <thead>
-              <tr>
-                <th>วิชาสอบ</th>
-                <th>คะแนน</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>บัญชี</td><td>${data.account}</td></tr>
-              <tr><td>คอมพิวเตอร์</td><td>${data.computer}</td></tr>
-              <tr><td>ค่าใช้จ่าย</td><td>${data.cost}</td></tr>
-              <tr><td>ภาษาอังกฤษ</td><td>${data.english}</td></tr>
-              <tr><td>คะแนนเพิ่ม</td><td>${data.bonus}</td></tr>
-              <tr id="totalScore"><td><strong>คะแนนรวม</strong></td><td><strong>${totalFixed}</strong></td></tr>
-            </tbody>
-          </table>
+            <table id="resultTable">
+              <thead>
+                <tr>
+                  <th>วิชาสอบ</th>
+                  <th>คะแนน</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>บัญชี</td><td>${data.account || 0}</td></tr>
+                <tr><td>คอมพิวเตอร์</td><td>${data.computer || 0}</td></tr>
+                <tr><td>ค่าใช้จ่าย</td><td>${data.cost || 0}</td></tr>
+                <tr><td>ภาษาอังกฤษ</td><td>${data.english || 0}</td></tr>
+                <tr><td>คะแนนเพิ่ม</td><td>${data.bonus || 0}</td></tr>
+                <tr id="totalScore" style="background:#f8f9fa;">
+                  <td><strong>คะแนนรวม</strong></td>
+                  <td style="color:#007bff;"><strong>${totalFixed}</strong></td>
+                </tr>
+              </tbody>
+            </table>
 
-          <p id="announceDate"><strong>วันที่ประกาศผล:</strong> ${formatThaiDate(data.datetest)}</p>
-
-          <div id="rankDisplay">ลำดับ: ${data.rank}</div>
-        `;
+            <p><strong>วันที่ประกาศผล:</strong> ${formatThaiDate(data.datetest)}</p>
+            <div id="rankDisplay">ลำดับที่ ${data.rank}</div>
+          `;
+        }
+      } catch (err) {
+        document.getElementById("spinner").style.display = "none";
+        document.getElementById("displayUserId").innerText = "Error: " + err.message;
+        console.error(err);
       }
     }
 
