@@ -2,26 +2,52 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>ผลสอบ</title>
+  <title>ผลสอบย้อนหลัง</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body {
       font-family: 'Sarabun', sans-serif;
       text-align: center;
-      padding: 2em;
+      padding: 1.5em;
       background: #f7f7f7;
     }
 
-    /* กล่องโชว์สถานะการดึง userId */
     #userIdStatusBox {
       background: #e3faf2;
       color: #0ca678;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #96f2d7;
+      font-size: 0.9em;
+      word-break: break-all;
+    }
+
+    /* กล่องควบคุมการเลือกปี พ.ศ. */
+    .filter-container {
+      background: white;
       padding: 15px;
       border-radius: 8px;
-      margin-bottom: 20px;
-      border: 1px solid #96f2d7;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      margin: 15px auto;
+      max-width: 500px;
+      width: 90%;
+    }
+
+    .filter-container label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+    }
+
+    .filter-container select {
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      width: 100%;
       font-size: 1em;
-      word-break: break-all;
+      font-family: 'Sarabun', sans-serif;
     }
 
     #spinner {
@@ -29,14 +55,14 @@
       border: 6px solid #f3f3f3;
       border-top: 6px solid #3498db;
       border-radius: 50%;
-      width: 50px;
-      height: 50px;
+      width: 40px;
+      height: 40px;
       animation: spin 1s linear infinite;
     }
 
     @keyframes spin {
       0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      100% { transform: rotate(3600deg); }
     }
 
     #userInfo {
@@ -46,7 +72,7 @@
     }
 
     #resultTable {
-      margin: 2em auto;
+      margin: 1.5em auto;
       border-collapse: collapse;
       width: 90%;
       max-width: 500px;
@@ -69,7 +95,7 @@
     }
 
     #rankDisplay {
-      font-size: 2.5em;
+      font-size: 2.3em;
       font-weight: bold;
       color: #dc3545;
       margin-top: 1em;
@@ -77,19 +103,20 @@
 
     img {
       margin-top: 1em;
-      max-width: 150px;
+      max-width: 130px;
       border-radius: 50%;
       box-shadow: 0 0 5px rgba(0,0,0,0.2);
     }
 
-    /* กล่องแจ้งเตือนความผิดพลาด */
     .error-card {
       background: #fff5f5;
       color: #c92a2a;
       border: 1px solid #ffc9c9;
       padding: 20px;
       border-radius: 8px;
-      margin-top: 15px;
+      margin: 15px auto;
+      max-width: 500px;
+      width: 90%;
     }
   </style>
 </head>
@@ -97,36 +124,42 @@
 
   <h2>ผลสอบเลื่อนฐานะนายทหารประทวน</h2>
 
-  <!-- ส่วนนี้จะทำงานและแสดงผลก่อนเสมอ เพื่อยืนยันว่าเรียก userId ได้จริง -->
   <div id="userIdStatusBox">
-    <strong>สถานะ LINE LIFF:</strong> <span id="liffStatus">กำลังเริ่มต้นระบบ...</span><br>
+    <strong>สถานะ LINE LIFF:</strong> <span id="liffStatus">กำลังเริ่มต้นระบบ...</span>
     <div id="userIdDisplayArea" style="display:none; margin-top: 5px;">
       <strong>Your User ID:</strong> <code id="myUserId" style="font-weight:bold; color:#007bff;"></code>
     </div>
   </div>
 
-  <!-- Spinner Loading สำหรับช่วงที่ไปดึงข้อมูลจาก Sheet -->
-  <div id="spinner"></div>
+  <div class="filter-container">
+    <label for="selectYear">🗓️ เลือกปี พ.ศ. ที่ต้องการตรวจสอบประวัติ:</label>
+    <select id="selectYear" onchange="fetchExamResult()">
+      <option value="2568" selected>ประจำปี พ.ศ. 2568 (ปีปัจจุบัน)</option>
+      <option value="2567">ประจำปี พ.ศ. 2567</option>
+      <option value="2566">ประจำปี พ.ศ. 2566</option>
+    </select>
+  </div>
 
-  <!-- Result area -->
+  <div id="spinner" style="display:none;"></div>
+
   <div id="resultArea" style="display:none;"></div>
 
   <script>
+    let globalUserId = ""; // เก็บค่า userId ไว้เรียกใช้ซ้ำเมื่อสลับปี
+    const sheetApi = "https://script.google.com/macros/s/AKfycbwC0-ZzkeYj3gUYhde2qyRyZxEgxUxnOXTCuziir6XMk8LcHKtOW8obbL-jO2cAu2Kbxw/exec";
+
     function formatThaiDate(dateString) {
       if(!dateString) return "-";
       const date = new Date(dateString);
+      if(isNaN(date.getTime())) return dateString; // ป้องกันถ้าระบบส่งเป็นข้อความตรงๆ มา
       const day = String(date.getDate()).padStart(2, '0');
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const year = date.getFullYear() + 543; 
       return `${day}/${month}/${year}`;
     }
 
-    const sheetApi = "https://script.google.com/macros/s/AKfycbwC0-ZzkeYj3gUYhde2qyRyZxEgxUxnOXTCuziir6XMk8LcHKtOW8obbL-jO2cAu2Kbxw/exec";
-
+    // ฟังก์ชันเริ่มต้น LIFF และดึงข้อมูลประวัติผู้ใช้
     async function main() {
-      let userId = "";
-
-      // --- ขั้นตอนที่ 1: ดึงและแสดงผล User ID จาก LINE ---
       try {
         await liff.init({ liffId: "2006679138-PWgbBdk3" });
 
@@ -136,35 +169,41 @@
         }
 
         const profile = await liff.getProfile();
-        userId = profile.userId;
+        globalUserId = profile.userId;
 
-        // ดึงสำเร็จ! สั่งโชว์บนหน้าจอทันที ไม่รอขั้นตอนถัดไป
-        document.getElementById("liffStatus").innerText = "ดึงข้อมูลสำเร็จ นำไปค้นหาต่อ...";
-        document.getElementById("myUserId").innerText = userId;
+        document.getElementById("liffStatus").innerText = "เชื่อมต่อบริการ LINE สำเร็จ";
+        document.getElementById("myUserId").innerText = globalUserId;
         document.getElementById("userIdDisplayArea").style.display = "block";
 
+        // เมื่อได้ไอดีแล้ว สั่งดึงคะแนนของปีเริ่มต้น (2568) ทันที
+        fetchExamResult();
+
       } catch (liffError) {
-        // หากระบบพังตั้งแต่ดึงจาก LINE
         document.getElementById("userIdStatusBox").style.background = "#fff5f5";
         document.getElementById("userIdStatusBox").style.borderColor = "#ffc9c9";
         document.getElementById("liffStatus").style.color = "#c92a2a";
-        document.getElementById("liffStatus").innerText = "เกิดข้อผิดพลาดในการดึงรหัสจาก LINE: " + liffError.message;
-        document.getElementById("spinner").style.display = "none";
-        return; // หยุดการทำงาน
+        document.getElementById("liffStatus").innerText = "เกิดข้อผิดพลาดรหัส LINE: " + liffError.message;
       }
+    }
 
-      // --- ขั้นตอนที่ 2: วิ่งไปดึงข้อมูลจาก Google Sheets ---
+    // ฟังก์ชันดึงข้อมูลคะแนนตามปีที่เลือกจากชีต
+    async function fetchExamResult() {
+      if (!globalUserId) return;
+
+      // แสดง Spinner และซ่อนพื้นที่ผลลัพธ์เก่าก่อนโหลดข้อมูลใหม่
+      document.getElementById("spinner").style.display = "block";
+      document.getElementById("resultArea").style.display = "none";
+
+      const selectedYear = document.getElementById("selectYear").value;
+
       try {
-        const res = await fetch(sheetApi + "?userId=" + userId);
+        const res = await fetch(`${sheetApi}?userId=${globalUserId}&year=${selectedYear}`);
         
-        // ตรวจสอบว่า HTTP status เป็น 200 หรือไม่
         if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
+          throw new Error(`HTTP Status: ${res.status}`);
         }
         
         const data = await res.json();
-
-        // ปิดตัวโหลดข้อมูล
         document.getElementById("spinner").style.display = "none";
         const area = document.getElementById("resultArea");
         area.style.display = "block";
@@ -172,23 +211,24 @@
         if (data.error) {
           area.innerHTML = `
             <div class="error-card">
-              <h3>เชื่อมต่อชีตสำเร็จ แต่ไม่พบชื่อ</h3>
+              <h3>แจ้งเตือนจากระบบ</h3>
               <p>${data.error}</p>
             </div>`;
         } else {
           const totalFixed = parseFloat(data.total).toFixed(2);
 
           area.innerHTML = `
-            <img src="${data.image || 'https://via.placeholder.com/150'}" alt="รูปภาพผู้ใช้">
+            <img src="${data.image || 'https://via.placeholder.com/130'}" alt="รูปภาพผู้ใช้">
             <div id="userInfo">
               <p><strong>ชื่อ - สกุล:</strong> ${data.name}</p>
+              <p style="font-size:0.9em; color:#6c757d;">ประวัติการสอบประจำปี พ.ศ. ${data.year}</p>
             </div>
 
             <table id="resultTable">
               <thead>
                 <tr>
                   <th>วิชาสอบ</th>
-                  <th>คะแนน</th>
+                  <th>คะแนนที่ได้</th>
                 </tr>
               </thead>
               <tbody>
@@ -210,7 +250,6 @@
         }
 
       } catch (fetchError) {
-        // หากขั้นตอนนี้พังด้วยอาการ Failed to fetch หรือ URL ผิดพลาด กล่องไอดีด้านบนจะยังคงค้างอยู่เหมือนเดิม
         document.getElementById("spinner").style.display = "none";
         const area = document.getElementById("resultArea");
         area.style.display = "block";
@@ -218,16 +257,13 @@
         area.innerHTML = `
           <div class="error-card">
             <h3>ดึงข้อมูลไม่สำเร็จ (Failed to fetch)</h3>
-            <p>ไม่สามารถเชื่อมต่อไปยังระบบฐานข้อมูล Google Sheets ได้</p>
-            <small style="color:#868e96;">คำอธิบายข้อผิดพลาด: ${fetchError.message}</small>
-            <br><br>
-            <p style="text-align:left; font-size:0.85em; background:#f1f3f5; padding:10px; border-radius:4px; color:#495057;">
-              <strong>คำแนะนำ:</strong> รหัสไอดีของคุณด้านบนอ่านค่าได้ปกติ ปัญหานี้มักจะเกิดจากเว็บแอปฝั่ง Google Script ยังไม่ได้อัปเดตเวอร์ชันใหม่หลังจากแก้โค้ด หรือไม่ได้ตั้งค่าสิทธิ์ให้เป็น "Anyone" (ทุกคน) ครับ
-            </p>
+            <p>ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาตรวจสอบอินเทอร์เน็ตหรือระบบฝั่งเซิร์ฟเวอร์</p>
+            <small style="color:#868e96;">Error message: ${fetchError.message}</small>
           </div>`;
       }
     }
 
+    // เริ่มทำงานระบบหลักเมื่อเปิดหน้าเว็บ
     main();
   </script>
 </body>
