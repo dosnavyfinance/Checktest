@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>ผลสอบย้อนหลัง</title>
+  <title>ประกาศผลสอบ</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body {
@@ -107,7 +107,16 @@
       border-radius: 50%;
       box-shadow: 0 0 5px rgba(0,0,0,0.2);
     }
-
+    
+    /* รูปภาพแสดงความยินดี */
+    .congrats-image {
+      margin-top: 1.5em;
+      max-width: 250px;
+      width: 90%;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    
     .error-card {
       background: #fff5f5;
       color: #c92a2a;
@@ -146,7 +155,8 @@
   <script>
     let globalUserId = ""; // เก็บค่า userId ไว้เรียกใช้ซ้ำเมื่อสลับปี
     const sheetApi = "https://script.google.com/macros/s/AKfycbwC0-ZzkeYj3gUYhde2qyRyZxEgxUxnOXTCuziir6XMk8LcHKtOW8obbL-jO2cAu2Kbxw/exec";
-
+    const congratsImageSrc = "https://lh3.googleusercontent.com/d/1RXFiBNPhGow6GfoOxxkqM43sk42_6Bxg"; // ใส่ URL ของรูปภาพแสดงความยินดีที่คุณต้องการที่นี่
+    
     function formatThaiDate(dateString) {
       if(!dateString) return "-";
       const date = new Date(dateString);
@@ -174,7 +184,7 @@
         document.getElementById("myUserId").innerText = globalUserId;
         document.getElementById("userIdDisplayArea").style.display = "block";
 
-        // เมื่อได้ไอดีแล้ว สั่งดึงคะแนนของปีเริ่มต้น (2568) ทันที
+        // เมื่อได้ไอดีแล้ว สั่งดึงคะแนนของปีเริ่มต้น (2569) ทันที
         fetchExamResult();
 
       } catch (liffError) {
@@ -246,6 +256,12 @@
             <p><strong>วันที่ประกาศผล:</strong> ${formatThaiDate(data.datetest)}</p>
             <div id="rankDisplay">ลำดับที่ ${data.rank}</div>
           `;
+
+          let congratsHtml = "";
+          // ตรวจสอบสถานะแสดงความยินดีจากคอลัมน์ M
+          if (data.congratsStatus == "1") {
+            congratsHtml = `<img src="${congratsImageSrc}" alt="ขอแสดงความยินดีด้วยครับ" class="congrats-image">`;
+          }
         }
 
       } catch (fetchError) {
