@@ -62,7 +62,7 @@
 
     @keyframes spin {
       0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); } /* แก้จาก 3600deg เป็น 360deg */
+      100% { transform: rotate(360deg); }
     }
 
     #userInfo {
@@ -101,20 +101,28 @@
       margin-top: 1em;
     }
 
-    img {
+    /* สไตล์รูปโปรไฟล์ */
+    .profile-image {
       margin-top: 1em;
       max-width: 130px;
       border-radius: 50%;
       box-shadow: 0 0 5px rgba(0,0,0,0.2);
     }
     
-    /* รูปภาพแสดงความยินดี */
+    /* สไตล์รูปภาพแสดงความยินดีด้านล่าง */
     .congrats-image {
       margin-top: 1.5em;
-      max-width: 250px;
+      max-width: 280px;
       width: 90%;
       border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      /* แอนิเมชันให้รูปค่อยๆ ขยายเด้งขึ้นมาแบบนุ่มนวล */
+      animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.6); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
     }
     
     .error-card {
@@ -153,21 +161,22 @@
   <div id="resultArea" style="display:none;"></div>
 
   <script>
-    let globalUserId = ""; // เก็บค่า userId ไว้เรียกใช้ซ้ำเมื่อสลับปี
+    let globalUserId = ""; 
     const sheetApi = "https://script.google.com/macros/s/AKfycbwC0-ZzkeYj3gUYhde2qyRyZxEgxUxnOXTCuziir6XMk8LcHKtOW8obbL-jO2cAu2Kbxw/exec";
-    const congratsImageSrc = "https://lh3.googleusercontent.com/d/1RXFiBNPhGow6GfoOxxkqM43sk42_6Bxg"; // ใส่ URL ของรูปภาพแสดงความยินดีที่คุณต้องการที่นี่
+    
+    // 💡 เปลี่ยนตรงนี้เป็น URL รูปภาพยินดีจริงๆ ของคุณได้เลยครับ (ตอนนี้ใส่รูปถ้วยรางวัลตัวอย่างให้เทส)
+    const congratsImageSrc = "https://docs.google.com/uc?export=view&id=1RXFiBNPhGow6GfoOxxkqM43sk42_6Bxg"; 
     
     function formatThaiDate(dateString) {
       if(!dateString) return "-";
       const date = new Date(dateString);
-      if(isNaN(date.getTime())) return dateString; // ป้องกันถ้าระบบส่งเป็นข้อความตรงๆ มา
+      if(isNaN(date.getTime())) return dateString; 
       const day = String(date.getDate()).padStart(2, '0');
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const year = date.getFullYear() + 543; 
       return `${day}/${month}/${year}`;
     }
 
-    // ฟังก์ชันเริ่มต้น LIFF และดึงข้อมูลประวัติผู้ใช้
     async function main() {
       try {
         await liff.init({ liffId: "2006679138-PWgbBdk3" });
@@ -184,7 +193,6 @@
         document.getElementById("myUserId").innerText = globalUserId;
         document.getElementById("userIdDisplayArea").style.display = "block";
 
-        // เมื่อได้ไอดีแล้ว สั่งดึงคะแนนของปีเริ่มต้น (2569) ทันที
         fetchExamResult();
 
       } catch (liffError) {
@@ -195,11 +203,9 @@
       }
     }
 
-    // ฟังก์ชันดึงข้อมูลคะแนนตามปีที่เลือกจากชีต
     async function fetchExamResult() {
       if (!globalUserId) return;
 
-      // แสดง Spinner และซ่อนพื้นที่ผลลัพธ์เก่าก่อนโหลดข้อมูลใหม่
       document.getElementById("spinner").style.display = "block";
       document.getElementById("resultArea").style.display = "none";
 
@@ -226,14 +232,15 @@
         } else {
           const totalFixed = parseFloat(data.total).toFixed(2);
 
+          // 1. ตรวจสอบสถานะและเตรียมข้อความแท็ก HTML ของรูปภาพยินดี
           let congratsHtml = "";
-          // ตรวจสอบสถานะแสดงความยินดีจากคอลัมน์ M
-          if (data.congratsStatus == "1") {
-            congratsHtml = `<img src="${congratsImageSrc}" alt="ขอแสดงความยินดีด้วยครับ" class="congrats-image">`;
+          if (String(data.congratsStatus).trim() === "1") {
+            congratsHtml = `<br><img src="${congratsImageSrc}" alt="ขอแสดงความยินดีด้วยครับ" class="congrats-image">`;
           }
           
+          // 2. พิมพ์โครงสร้าง HTML ออกหน้าจอ (ย้ายคำสั่ง ${congratsHtml} ไปไว้ใต้กล่องลำดับที่)
           area.innerHTML = `
-            <img src="${data.image || 'https://via.placeholder.com/130'}" alt="รูปภาพผู้ใช้">
+            <img src="${data.image || 'https://via.placeholder.com/130'}" alt="รูปภาพผู้ใช้" class="profile-image">
             <div id="userInfo">
               <p><strong>ชื่อ - สกุล:</strong> ${data.name}</p>
               <p style="font-size:0.9em; color:#6c757d;">ประวัติการสอบประจำปี พ.ศ. ${data.year}</p>
@@ -261,7 +268,8 @@
 
             <p><strong>วันที่ประกาศผล:</strong> ${formatThaiDate(data.datetest)}</p>
             <div id="rankDisplay">ลำดับที่ ${data.rank}</div>
-            <div id="congrats">${data.congratsStatus}</div>
+            
+            ${congratsHtml}
           `;
         }
 
@@ -279,7 +287,6 @@
       }
     }
 
-    // เริ่มทำงานระบบหลักเมื่อเปิดหน้าเว็บ
     main();
   </script>
 </body>
