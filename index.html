@@ -226,6 +226,12 @@
         } else {
           const totalFixed = parseFloat(data.total).toFixed(2);
 
+          let congratsHtml = "";
+          // ตรวจสอบสถานะแสดงความยินดีจากคอลัมน์ M
+          if (data.congratsStatus == "1") {
+            congratsHtml = `<img src="${congratsImageSrc}" alt="ขอแสดงความยินดีด้วยครับ" class="congrats-image">`;
+          }
+          
           area.innerHTML = `
             <img src="${data.image || 'https://via.placeholder.com/130'}" alt="รูปภาพผู้ใช้">
             <div id="userInfo">
@@ -255,13 +261,8 @@
 
             <p><strong>วันที่ประกาศผล:</strong> ${formatThaiDate(data.datetest)}</p>
             <div id="rankDisplay">ลำดับที่ ${data.rank}</div>
+            <div id="congrats">สถานะแสดงความยินดี ${data.congratsStatus}</div>
           `;
-
-          let congratsHtml = "";
-          // ตรวจสอบสถานะแสดงความยินดีจากคอลัมน์ M
-          if (data.congratsStatus == "1") {
-            congratsHtml = `<img src="${congratsImageSrc}" alt="ขอแสดงความยินดีด้วยครับ" class="congrats-image">`;
-          }
         }
 
       } catch (fetchError) {
